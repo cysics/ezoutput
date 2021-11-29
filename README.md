@@ -7,6 +7,6 @@ You can install the developing version of ezoutput from [github](https://github.
 
 ```{r}
 # install.packages("remotes")
-remotes::install_github("ezoutput")
+remotes::install_github("cysics/ezoutput")
 ```
 ## Example
