@@ -5,3 +5,4 @@ Easy To Get Statistics Result
 ```{r}
 install.packages("ezoutput")
 ```
+## Example
