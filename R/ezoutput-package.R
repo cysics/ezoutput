@@ -2,6 +2,6 @@
 "_PACKAGE"
 
 ## usethis namespace: start
-#' @importFrom tibble tibble
+NULL
 ## usethis namespace: end
 NULL
