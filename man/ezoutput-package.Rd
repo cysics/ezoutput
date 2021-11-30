@@ -4,7 +4,7 @@
 \name{ezoutput-package}
 \alias{ezoutput}
 \alias{ezoutput-package}
-\title{ezoutput: Easy Statistics Result}
+\title{ezoutput: Easy Statistics Output}
 \description{
 What the package does (one paragraph).
 }

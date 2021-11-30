@@ -5,11 +5,11 @@
 \alias{survey}
 \title{Survey about Tteokbokki}
 \format{
-Tibble with columns
+Tibble with 335 rows and 57 variables:
 \describe{
-\item{성별}{gender}
-\item{연령}{age}
-\item{학년}{grade}
+\item{gender}{gender}
+\item{age}{age}
+\item{grade}{grade}
 }
 }
 \source{
