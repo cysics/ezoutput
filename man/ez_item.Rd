@@ -4,7 +4,7 @@
 \alias{ez_item}
 \title{Item Analysis}
 \usage{
-ez_item(data, method = "auto")
+ez_item(data, method = "auto", k = 3, l = 1, u = 3, csv = FALSE)
 }
 \arguments{
 \item{data}{Data of item}
@@ -12,12 +12,12 @@ ez_item(data, method = "auto")
 \item{method}{Method like "2PL", "graded", and "auto"}
 }
 \value{
-A character vector.
+A data.frame.
 }
 \description{
 Item Analysis
 }
 \examples{
-data <- survey[5:10]
-strsplit(data)
+data <- survey[5:9]
+ez_item(data)
 }
