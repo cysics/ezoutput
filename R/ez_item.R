@@ -25,15 +25,15 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
             pull(levels)
     }
 
-    fit_irt <- mirt(data, model=1, itemtype=models)
-    item_fit <<- fit_irt
+    item_fit <<- fit_irt <- mirt(data, model=1, itemtype=models)
 
-    result <- ItemAnalysis(data, k=k, l=l, u=u) %>% select(Difficulty, SD, ULI) %>%
+    result <- ItemAnalysis(data, k=k, l=l, u=u) %>% select(Difficulty, SD, gULI) %>%
         rownames_to_column("item") %>%
         mutate(discrimination=coef(item_fit, IRTpars=T, verbose=F, simplify=T, order=T) %>% .[1] %>%
                    data.frame() %>% pull(1)) %>%
         mutate(b=coef(item_fit, IRTpars=T, verbose=F, simplify=T, order=T) %>% .[1] %>% data.frame() %>%
-                   mutate(items.b=ifelse(is.na(items.b), rowMeans(.[3:ncol(.)], na.rm=T), items.b)) %>%
+                   mutate(items.b=ifelse(length(unique(models))==1, rowMeans(.[2:ncol(.)], na.rm=T),
+                                         ifelse(is.na(items.b), rowMeans(.[3:ncol(.)], na.rm=T), items.b))) %>%
                    pull(items.b)) %>% as_tibble() %>%
         mutate(diffCTT=ifelse(Difficulty>=0.8, "매우 쉬움",
                              ifelse(Difficulty>=0.6, "쉬움",
@@ -43,10 +43,10 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
                              ifelse(b<(-0.5), "쉬움",
                                     ifelse(b<0.5, "중간",
                                            ifelse(b<2, "어려움", "매우 어려움"))))) %>%
-        mutate(discCTT=ifelse(ULI<0, "부적절함",
-                             ifelse(ULI<0.2, "매우 낮음",
-                                    ifelse(ULI<0.3, "낮음",
-                                           ifelse(ULI<0.4, "중간", "높음"))))) %>%
+        mutate(discCTT=ifelse(gULI<0, "부적절함",
+                             ifelse(gULI<0.2, "매우 낮음",
+                                    ifelse(gULI<0.3, "낮음",
+                                           ifelse(gULI<0.4, "중간", "높음"))))) %>%
         mutate(discIRT=ifelse(b<0, "부적절함",
                              ifelse(b<0.35, "거의 없음",
                                     ifelse(b<0.65, "낮음",
