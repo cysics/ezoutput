@@ -10,6 +10,12 @@ ez_item(data, method = "auto", k = 3, l = 1, u = 3, csv = FALSE)
 \item{data}{Data of item}
 
 \item{method}{Method like "2PL", "graded", and "auto"}
+
+\item{k}{Number of group}
+
+\item{l}{Lower of group}
+
+\item{u}{Upper of group}
 }
 \value{
 A data.frame.

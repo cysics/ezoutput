@@ -2,6 +2,9 @@
 #'
 #' @param data Data of item
 #' @param method Method like "2PL", "graded", and "auto"
+#' @param k Number of group
+#' @param l Lower of group
+#' @param u Upper of group
 #'
 #' @return A data.frame.
 #' @export
@@ -9,13 +12,6 @@
 #' @examples
 #' data <- survey[5:9]
 #' ez_item(data)
-
-# graded는 부분점수간에는 난이도 서열이 있다고 가정한다. 문항별 부분점수의 간격이 다를 수도 있다. 난이도와 변별도를 제공해준다.
-# rsm은 rash계열로 문항당 동일한 수의 범주가 있고 모든 항목이 동일하다고 가정한다. (모든 문항당 범주 간격이 동일한 리커트척도에 적용하기 위해 개발)
-# pcm도 rash계열이며 부분점끼리 서열이 없는 것으로 간주한다.
-# gpcm은 부분점수끼리 서열이 없는 것으로 간주하기 때문에 부분점수끼리 난이도가 같게 나올 수도 있다.
-# gpcm은 pcm과 달리 변별도를 제공하며 pcm과 마찬가지로 rash 계열이라 관련 정보를 제공한다.
-# 정의적인 특성검사는 GGUM 모델이 타당하다.
 
 ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
     if(method=="auto"){
@@ -51,11 +47,78 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
                              ifelse(b<0.35, "거의 없음",
                                     ifelse(b<0.65, "낮음",
                                            ifelse(b<1.35, "적절함",
-                                                  ifelse(b<1.70, "높음", "매우 높음"))))))
-    # CTT : 2 낮음(0.2~0.3), 3 보통(0.3~0.4), 4 높음(0.4~)
-    # IRT : 2 낮음(0.35~0.65), 3 보통(0.65~1.35), 4 높음(1.35~1.7), 5 매우 높음(1.7~)
+                                                  ifelse(b<1.70, "높음", "매우 높음")))))) %>%
+        mutate(discCTT=ifelse(gULI>0.4, round(ifelse(4+(gULI-0.4)*10<5, 4+(gULI-0.4)*10, 5), 2),
+                              ifelse(gULI>0.3, round(3+(gULI-0.3)*10, 2),
+                                     ifelse(gULI>0.2, round(2+(gULI-0.2)*10, 2),
+                                            ifelse(gULI>0, 1+round((gULI)*10, 2), 0))))) %>%
+        mutate(discIRT=ifelse(discrimination>1.7, 5,
+                              ifelse(discrimination>1.3, round(4+(discrimination-1.3)/0.4, 2),
+                                     ifelse(discrimination>0.65, round(3+(discrimination-0.65)/0.65, 2),
+                                            ifelse(discrimination>0.35, round(2+(discrimination-0.35)/0.35, 2),
+                                                   ifelse(discrimination>0, 1, 0)))))) %>%
+        mutate(diffCTT=Difficulty) %>%
+        mutate(diffIRT=ifelse(b<(-2), round(0.8+(b*(-1)-2)*0.2/1.5),
+                              ifelse(b<(-0.5), round(0.6+(b*(-1)-0.5)*0.2/1.5),
+                                     ifelse(b<0.5, round(0.4+((b-0.5)*(-1))*0.2/1),
+                                            ifelse(b<2, round(0.2+(b-0.5)*0.2/1.5), round((b-0.5)*0.2/1.5))))))
 
     item_result <<- result
+
+    p1 <- result %>%
+        select(item, Difficulty, gULI) %>% rename(diff=2, disc=3) %>%
+        pivot_longer(-item, names_to = "CTT") %>%
+        ggbarplot(x="item", y="value", fill="CTT", xlab="", ylab="",
+                  label=T, lab.pos="out", lab.vjust=0.5, lab.hjust=-0.2, lab.nb.digits=2,
+                  add.params=list(group="CTT"), position=position_dodge(0.8), rotate=90)+
+        geom_hline(yintercept=0.2, linetype=2, color="red")+
+        geom_hline(yintercept=0.3, linetype=2, color="blue")+
+        geom_hline(yintercept=0.4, linetype=2, color="blue")+
+        geom_hline(yintercept=0.8, linetype=2, color="red")+
+        scale_y_continuous(expand =expansion(mult=c(0, 0.1)))+
+        scale_fill_brewer(palette="Set3")
+
+    p2 <- result %>%
+        select(item, b, discrimination) %>% rename(diff=2, disc=3) %>%
+        pivot_longer(-item, names_to = "IRT") %>%
+        ggbarplot(x="item", y="value", fill="IRT", xlab="", ylab="",
+                  label=T, lab.pos="out", lab.vjust=0.5, lab.hjust=-0.2, lab.nb.digits=2,
+                  add.params=list(group="IRT"), position=position_dodge(0.8), rotate=90)+
+        geom_hline(yintercept=-2, linetype=2, color="red")+
+        geom_hline(yintercept=-0.5, linetype=2, color="red")+
+        geom_hline(yintercept=0.5, linetype=2, color="red")+
+        geom_hline(yintercept=2, linetype=2, color="red")+
+        geom_hline(yintercept=0.35, linetype=2, color="blue")+
+        geom_hline(yintercept=0.65, linetype=2, color="blue")+
+        geom_hline(yintercept=1.35, linetype=2, color="blue")+
+        geom_hline(yintercept=1.7, linetype=2, color="blue")+
+        scale_y_continuous(expand =expansion(mult=c(0, 0.1)))+
+        scale_fill_brewer(palette="Set3")
+
+    p3 <- result %>%
+        select(item, diffCTT, diffIRT) %>% rename(CTT=2, IRT=3) %>%
+        pivot_longer(-item, names_to = "난이도") %>%
+        ggbarplot(x="item", y="value", fill="난이도", xlab="", ylab="",
+                  label=T, lab.pos="out", lab.vjust=0.5, lab.hjust=-0.2, lab.nb.digits=2,
+                  add.params=list(group="난이도"), position=position_dodge(0.8), rotate=90)+
+        geom_hline(yintercept=0.2, linetype=2, color="blue")+
+        geom_hline(yintercept=0.4, linetype=2, color="blue")+
+        geom_hline(yintercept=0.6, linetype=2, color="blue")+
+        geom_hline(yintercept=0.8, linetype=2, color="red")+
+        scale_y_continuous(expand =expansion(mult=c(0, 0.1)))+
+        scale_fill_brewer(palette="Set3")
+
+    p4 <- result %>%
+        select(item, discCTT, discIRT) %>% rename(CTT=2, IRT=3) %>%
+        pivot_longer(-item, names_to = "변별도") %>%
+        ggbarplot(x="item", y="value", fill="변별도", xlab="", ylab="",
+                  label=T, lab.pos="out", lab.vjust=0.5, lab.hjust=-0.2, lab.nb.digits=2,
+                  add.params=list(group="변별도"), position=position_dodge(0.8), rotate=90)+
+        geom_hline(yintercept=2, linetype=2, color="red")+
+        geom_hline(yintercept=3, linetype=2, color="blue")+
+        geom_hline(yintercept=4, linetype=2, color="blue")+
+        scale_y_continuous(expand =expansion(mult=c(0, 0.1)))+
+        scale_fill_brewer(palette="Set3")
 
     if(csv){
         write.csv(result, "discrimination.csv", row.names=FALSE)
