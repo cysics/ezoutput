@@ -124,5 +124,5 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
         write.csv(result, "discrimination.csv", row.names=FALSE)
     }
 
-    result
+    return(list(result, p1, p2, p3, p4))
 }
