@@ -61,9 +61,9 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
                               ifelse(discrimination>1.3, round(0.4+(discrimination-1.3)/4, 2),
                                      ifelse(discrimination>0.65, round(0.3+(discrimination-0.65)/6.5, 2),
                                             ifelse(discrimination>0.35, round(0.2+(discrimination-0.35)/3.5, 2),
-                                                   ifelse(discrimination>0, 1, 0)))))) %>%
+                                                   ifelse(discrimination>0, 0.1, 0)))))) %>%
         mutate(CTTdiff=Difficulty) %>%
-        mutate(IRTdiff=ifelse(b<(-2), round(0.8+(b*(-1)-2)/15, 3),
+        mutate(IRTdiff=ifelse(b<(-2), ifelse(round(0.8+(b*(-1)-2)/15, 3)>1, 1, round(0.8+(b*(-1)-2)/15, 3)),
                               ifelse(b<(-0.5), round(0.6+(b*(-1)-0.5)/15, 3),
                                      ifelse(b<0.5, round(0.4+(b+0.5)/10, 3),
                                             ifelse(b<2, round(0.2+(b-0.5)/15, 3),
@@ -126,5 +126,5 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
         write.csv(result, "discrimination.csv", row.names=FALSE)
     }
 
-    return(list(result, p1, p2, p3, p4))
+    return(list(result, p4))
 }
