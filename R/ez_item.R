@@ -22,46 +22,52 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
     }
 
     item_fit <<- fit_irt <- mirt(data, model=1, itemtype=models)
-
     result <- ItemAnalysis(data, k=k, l=l, u=u) %>% select(Difficulty, SD, gULI) %>%
         rownames_to_column("item") %>%
         mutate(discrimination=coef(item_fit, IRTpars=T, verbose=F, simplify=T, order=T) %>% .[1] %>%
-                   data.frame() %>% pull(1)) %>%
-        mutate(b=coef(item_fit, IRTpars=T, verbose=F, simplify=T, order=T) %>% .[1] %>% data.frame() %>%
-                   mutate(items.b=ifelse(length(unique(models))==1, rowMeans(.[2:ncol(.)], na.rm=T),
-                                         ifelse(is.na(items.b), rowMeans(.[3:ncol(.)], na.rm=T), items.b))) %>%
-                   pull(items.b)) %>% as_tibble() %>%
+                   data.frame() %>% pull(1))
+
+    ifelse(length(unique(models))==1 & models[1]=="graded",
+           result <- result %>%
+               mutate(b=coef(item_fit, IRTpars=T, verbose=F, simplify=T, order=T) %>% .[1] %>% data.frame() %>%
+                          mutate(items.b=rowMeans(.[2:ncol(.)], na.rm=T)) %>%
+                          pull(items.b)) %>% as_tibble()
+           ,
+           result <- result %>%
+               mutate(b=coef(item_fit, IRTpars=T, verbose=F, simplify=T, order=T) %>% .[1] %>% data.frame() %>%
+                          mutate(items.b=ifelse(length(unique(models))==2 & is.na(items.b), rowMeans(.[5:ncol(.)], na.rm=T), items.b)) %>%
+                          pull(items.b)) %>% as_tibble()
+    )
+    result <- result %>%
         mutate(diffCTT=ifelse(Difficulty>=0.8, "매우 쉬움",
-                             ifelse(Difficulty>=0.6, "쉬움",
-                                    ifelse(Difficulty>=0.4, "적절함",
-                                           ifelse(Difficulty>=0.2, "어려움", "매우 어려움"))))) %>%
+                              ifelse(Difficulty>=0.6, "쉬움",
+                                     ifelse(Difficulty>=0.4, "적절함",
+                                            ifelse(Difficulty>=0.2, "어려움", "매우 어려움"))))) %>%
         mutate(diffIRT=ifelse(b<(-2), "매우 쉬움",
-                             ifelse(b<(-0.5), "쉬움",
-                                    ifelse(b<0.5, "중간",
-                                           ifelse(b<2, "어려움", "매우 어려움"))))) %>%
+                              ifelse(b<(-0.5), "쉬움",
+                                     ifelse(b<0.5, "중간",
+                                            ifelse(b<2, "어려움", "매우 어려움"))))) %>%
         mutate(discCTT=ifelse(gULI<0, "부적절함",
-                             ifelse(gULI<0.2, "매우 낮음",
-                                    ifelse(gULI<0.3, "낮음",
-                                           ifelse(gULI<0.4, "중간", "높음"))))) %>%
-        mutate(discIRT=ifelse(b<0, "부적절함",
-                             ifelse(b<0.35, "거의 없음",
-                                    ifelse(b<0.65, "낮음",
-                                           ifelse(b<1.35, "적절함",
-                                                  ifelse(b<1.70, "높음", "매우 높음")))))) %>%
-        mutate(discCTT=ifelse(gULI>0.4, round(ifelse(4+(gULI-0.4)*10<5, 4+(gULI-0.4)*10, 5), 2),
-                              ifelse(gULI>0.3, round(3+(gULI-0.3)*10, 2),
-                                     ifelse(gULI>0.2, round(2+(gULI-0.2)*10, 2),
-                                            ifelse(gULI>0, 1+round((gULI)*10, 2), 0))))) %>%
-        mutate(discIRT=ifelse(discrimination>1.7, 5,
-                              ifelse(discrimination>1.3, round(4+(discrimination-1.3)/0.4, 2),
-                                     ifelse(discrimination>0.65, round(3+(discrimination-0.65)/0.65, 2),
-                                            ifelse(discrimination>0.35, round(2+(discrimination-0.35)/0.35, 2),
+                              ifelse(gULI<0.2, "매우 낮음",
+                                     ifelse(gULI<0.3, "낮음",
+                                            ifelse(gULI<0.4, "중간", "높음"))))) %>%
+        mutate(discIRT=ifelse(discrimination<0, "부적절함",
+                              ifelse(discrimination<0.35, "거의 없음",
+                                     ifelse(discrimination<0.65, "낮음",
+                                            ifelse(discrimination<1.35, "적절함",
+                                                   ifelse(discrimination<1.70, "높음", "매우 높음")))))) %>%
+        mutate(CTTdisc=gULI) %>%
+        mutate(IRTdisc=ifelse(discrimination>1.7, 0.5,
+                              ifelse(discrimination>1.3, round(0.4+(discrimination-1.3)/4, 2),
+                                     ifelse(discrimination>0.65, round(0.3+(discrimination-0.65)/6.5, 2),
+                                            ifelse(discrimination>0.35, round(0.2+(discrimination-0.35)/3.5, 2),
                                                    ifelse(discrimination>0, 1, 0)))))) %>%
-        mutate(diffCTT=Difficulty) %>%
-        mutate(diffIRT=ifelse(b<(-2), round(0.8+(b*(-1)-2)*0.2/1.5),
-                              ifelse(b<(-0.5), round(0.6+(b*(-1)-0.5)*0.2/1.5),
-                                     ifelse(b<0.5, round(0.4+((b-0.5)*(-1))*0.2/1),
-                                            ifelse(b<2, round(0.2+(b-0.5)*0.2/1.5), round((b-0.5)*0.2/1.5))))))
+        mutate(CTTdiff=Difficulty) %>%
+        mutate(IRTdiff=ifelse(b<(-2), round(0.8+(b*(-1)-2)/15, 3),
+                              ifelse(b<(-0.5), round(0.6+(b*(-1)-0.5)/15, 3),
+                                     ifelse(b<0.5, round(0.4+(b+0.5)/10, 3),
+                                            ifelse(b<2, round(0.2+(b-0.5)/15, 3),
+                                                   ifelse(round(0.2-(b-2)/15, 3)>0, round(0.2-(b-2)/15, 3), 0))))))
 
     item_result <<- result
 
@@ -74,7 +80,6 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
         geom_hline(yintercept=0.2, linetype=2, color="red")+
         geom_hline(yintercept=0.3, linetype=2, color="blue")+
         geom_hline(yintercept=0.4, linetype=2, color="blue")+
-        geom_hline(yintercept=0.8, linetype=2, color="red")+
         scale_y_continuous(expand =expansion(mult=c(0, 0.1)))+
         scale_fill_brewer(palette="Set3")
 
@@ -84,11 +89,7 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
         ggbarplot(x="item", y="value", fill="IRT", xlab="", ylab="",
                   label=T, lab.pos="out", lab.vjust=0.5, lab.hjust=-0.2, lab.nb.digits=2,
                   add.params=list(group="IRT"), position=position_dodge(0.8), rotate=90)+
-        geom_hline(yintercept=-2, linetype=2, color="red")+
-        geom_hline(yintercept=-0.5, linetype=2, color="red")+
-        geom_hline(yintercept=0.5, linetype=2, color="red")+
-        geom_hline(yintercept=2, linetype=2, color="red")+
-        geom_hline(yintercept=0.35, linetype=2, color="blue")+
+        geom_hline(yintercept=0.35, linetype=2, color="red")+
         geom_hline(yintercept=0.65, linetype=2, color="blue")+
         geom_hline(yintercept=1.35, linetype=2, color="blue")+
         geom_hline(yintercept=1.7, linetype=2, color="blue")+
@@ -96,12 +97,12 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
         scale_fill_brewer(palette="Set3")
 
     p3 <- result %>%
-        select(item, diffCTT, diffIRT) %>% rename(CTT=2, IRT=3) %>%
+        select(item, CTTdiff, IRTdiff) %>% rename(CTT=2, IRT=3) %>%
         pivot_longer(-item, names_to = "난이도") %>%
         ggbarplot(x="item", y="value", fill="난이도", xlab="", ylab="",
                   label=T, lab.pos="out", lab.vjust=0.5, lab.hjust=-0.2, lab.nb.digits=2,
                   add.params=list(group="난이도"), position=position_dodge(0.8), rotate=90)+
-        geom_hline(yintercept=0.2, linetype=2, color="blue")+
+        geom_hline(yintercept=0.2, linetype=2, color="red")+
         geom_hline(yintercept=0.4, linetype=2, color="blue")+
         geom_hline(yintercept=0.6, linetype=2, color="blue")+
         geom_hline(yintercept=0.8, linetype=2, color="red")+
@@ -109,14 +110,15 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
         scale_fill_brewer(palette="Set3")
 
     p4 <- result %>%
-        select(item, discCTT, discIRT) %>% rename(CTT=2, IRT=3) %>%
+        select(item, CTTdisc, IRTdisc) %>% rename(CTT=2, IRT=3) %>%
         pivot_longer(-item, names_to = "변별도") %>%
         ggbarplot(x="item", y="value", fill="변별도", xlab="", ylab="",
                   label=T, lab.pos="out", lab.vjust=0.5, lab.hjust=-0.2, lab.nb.digits=2,
                   add.params=list(group="변별도"), position=position_dodge(0.8), rotate=90)+
-        geom_hline(yintercept=2, linetype=2, color="red")+
-        geom_hline(yintercept=3, linetype=2, color="blue")+
-        geom_hline(yintercept=4, linetype=2, color="blue")+
+        geom_hline(yintercept=0.2, linetype=2, color="red")+
+        geom_hline(yintercept=0.3, linetype=2, color="blue")+
+        geom_hline(yintercept=0.4, linetype=2, color="blue")+
+        geom_hline(yintercept=0.5, linetype=2, color="blue")+
         scale_y_continuous(expand =expansion(mult=c(0, 0.1)))+
         scale_fill_brewer(palette="Set3")
 
