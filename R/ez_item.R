@@ -33,10 +33,18 @@ ez_item <- function(data, method="auto", k=3, l=1, u=3, csv=FALSE){
                           mutate(items.b=rowMeans(.[2:ncol(.)], na.rm=T)) %>%
                           pull(items.b)) %>% as_tibble()
            ,
-           result <- result %>%
-               mutate(b=coef(item_fit, IRTpars=T, verbose=F, simplify=T, order=T) %>% .[1] %>% data.frame() %>%
-                          mutate(items.b=ifelse(length(unique(models))==2 & is.na(items.b), rowMeans(.[5:ncol(.)], na.rm=T), items.b)) %>%
-                          pull(items.b)) %>% as_tibble()
+           ifelse(length(unique(models))==2 & models[1]=="graded",
+                  result <- result %>%
+                      mutate(b=coef(item_fit, IRTpars=T, verbose=F, simplify=T, order=T) %>% .[1] %>% data.frame() %>%
+                                 mutate(items.b=ifelse(is.na(items.b), rowMeans(.[2:(ncol(.)-3)], na.rm=T), items.b)) %>%
+                                 pull(items.b)) %>% as_tibble()
+                  ,
+                  result <- result %>%
+                      mutate(b=coef(item_fit, IRTpars=T, verbose=F, simplify=T, order=T) %>% .[1] %>% data.frame() %>%
+                                 mutate(items.b=ifelse(length(unique(models))==2 & is.na(items.b), rowMeans(.[5:ncol(.)], na.rm=T), items.b)) %>%
+                                 pull(items.b)) %>% as_tibble()
+                  )
+
     )
     result <- result %>%
         mutate(diffCTT=ifelse(Difficulty>=0.8, "매우 쉬움",
